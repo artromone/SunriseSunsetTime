@@ -41,8 +41,32 @@ namespace SGP4
     {
       throw std::runtime_error("Sunrise does not occur on this date at this location.");
     }
-    DateTime dt_sunrise(year, month, day, hour_sunrise, 0, 0, 0);
-    DateTime dt_sunset(year, month, day, hour_sunset, 0, 0, 0);
+
+    int minute_sunrise = -1;
+    int minute_sunset = -1;
+
+    for (int minute = 0; minute < 60; ++minute)
+    {
+      DateTime dt_sunrise(year, month, day, hour_sunrise, minute, 0, 0);
+      DateTime dt_sunset(year, month, day, hour_sunset, minute, 0, 0);
+      double sunElevRise = getSunElevation(dt_sunrise, observer);
+      double sunElevSet = getSunElevation(dt_sunset, observer);
+      if (sunElevRise > 0 && minute_sunrise == -1)
+      {
+        minute_sunrise = minute - 1;
+      }
+      else if (sunElevSet <= 0 && minute_sunrise != -1)
+      {
+        minute_sunset = minute;
+        break;
+      }
+    }
+
+    DateTime dt_sunrise(year, month, day,
+                        hour_sunrise, minute_sunrise, 0, 0);
+    DateTime dt_sunset(year, month, day,
+                       hour_sunset, minute_sunset, 0, 0);
+
     return std::make_pair(dt_sunrise, dt_sunset);
   }
 }
