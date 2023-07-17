@@ -117,6 +117,11 @@ public:
      * @param[in] second the second
      * @param[in] microsecond the microsecond
      */
+    DateTime( int year, int month, int day, int hour, int minute, int second, int microsecond )
+    {
+      Initialise( year, month, day, hour, minute, second, microsecond );
+    }
+
     void Initialise( int year,
                      int month,
                      int day,
