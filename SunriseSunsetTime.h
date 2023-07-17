@@ -5,6 +5,6 @@
 #include <SGP4/Observer.h>
 namespace SGP4
 {
-  std::pair< DateTime, DateTime > getSunriseAndSunsetTime(const DateTime &currTime, Observer observer);
+  std::pair< DateTime, DateTime > getSunriseAndSunsetTime(const DateTime &currTime, const Observer &observer);
 }
 #endif
