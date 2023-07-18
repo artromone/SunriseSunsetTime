@@ -1,4 +1,5 @@
 #include "SunriseSunsetTime.h"
+#include <functional>
 #include <SGP4/CoordTopocentric.h>
 #include <SGP4/SolarPosition.h>
 using namespace SGP4;
@@ -11,44 +12,27 @@ namespace
     CoordTopocentric lookAngle = observer.GetLookAngle(sunEci);
     return Util::RadiansToDegrees(lookAngle.elevation);
   }
-  DateTime binarySearchSunrise(const DateTime &start, const DateTime &end, const Observer &observer)
+  DateTime binarySearch(const DateTime &currTime, const std::function< bool(DateTime) > &exitCondition)
   {
-    DateTime left = start;
-    DateTime right = end;
-    DateTime result = start;
-    while (left <= right)
+    int year = currTime.Year();
+    int month = currTime.Month();
+    int day = currTime.Day();
+    DateTime dayStart(year, month, day, 0, 0, 0, 0);
+    DateTime dayEnd(year, month, day, 23, 59, 59, 999999);
+    DateTime lowerBound = dayStart;
+    DateTime upperBound = dayEnd;
+    DateTime result = dayStart;
+    while (lowerBound <= upperBound)
     {
-      DateTime mid = DateTime(left.Ticks() + (right.Ticks() - left.Ticks()) / 2);
-      double midSunElevation = getSunElevation(mid, observer);
-      if (midSunElevation > sunCriticalAngle)
+      DateTime mid = DateTime(lowerBound.Ticks() + (upperBound.Ticks() - lowerBound.Ticks()) / 2);
+      if (exitCondition(mid))
       {
         result = mid;
-        right = mid - TimeSpan(1);
+        upperBound = mid - TimeSpan(1);
       }
       else
       {
-        left = mid + TimeSpan(1);
-      }
-    }
-    return result;
-  }
-  DateTime binarySearchSunset(const DateTime &start, const DateTime &end, const Observer &observer)
-  {
-    DateTime left = start;
-    DateTime right = end;
-    DateTime result = end;
-    while (left <= right)
-    {
-      DateTime mid = DateTime(left.Ticks() + (right.Ticks() - left.Ticks()) / 2);
-      double midSunElevation = getSunElevation(mid, observer);
-      if (midSunElevation <= sunCriticalAngle)
-      {
-        result = mid;
-        right = mid - TimeSpan(1);
-      }
-      else
-      {
-        left = mid + TimeSpan(1);
+        lowerBound = mid + TimeSpan(1);
       }
     }
     return result;
@@ -56,12 +40,15 @@ namespace
 }
 std::pair< DateTime, DateTime > getSunriseAndSunsetTime(const DateTime &currTime, const Observer &observer)
 {
-  int year = currTime.Year();
-  int month = currTime.Month();
-  int day = currTime.Day();
-  DateTime dayStart(year, month, day, 0, 0, 0, 0);
-  DateTime dayEnd(year, month, day, 23, 59, 59, 999999);
-  DateTime sunrise = binarySearchSunrise(dayStart, dayEnd, observer);
-  DateTime sunset = binarySearchSunset(dayStart, dayEnd, observer);
+  DateTime sunrise = binarySearch(currTime, [&observer](DateTime dt)
+  {
+    double midSunElevation = getSunElevation(dt, observer);
+    return midSunElevation > sunCriticalAngle;
+  });
+  DateTime sunset = binarySearch(currTime, [&observer](DateTime dt)
+  {
+    double midSunElevation = getSunElevation(dt, observer);
+    return midSunElevation <= sunCriticalAngle;
+  });
   return std::make_pair(sunrise, sunset);
 }
