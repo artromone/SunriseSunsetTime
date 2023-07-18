@@ -12,6 +12,11 @@ namespace
     CoordTopocentric lookAngle = observer.GetLookAngle(sunEci);
     return Util::RadiansToDegrees(lookAngle.elevation);
   }
+  DateTime roundToMilliseconds(const DateTime &dateTime)
+  {
+    int64_t milliseconds = (dateTime.Ticks() / TicksPerMillisecond) * TicksPerMillisecond;
+    return DateTime{milliseconds};
+  }
   DateTime binarySearch(const DateTime &currTime, const std::function< bool(DateTime) > &exitCondition)
   {
     int year = currTime.Year();
@@ -54,5 +59,5 @@ std::pair< DateTime, DateTime > getSunriseAndSunsetTime(const DateTime &currTime
   {
     throw std::runtime_error("Polar day or polar night. No sunrise/sunset found.");
   }
-  return std::make_pair(sunrise, sunset);
+  return std::make_pair(roundToMilliseconds(sunrise), roundToMilliseconds(sunset));
 }
