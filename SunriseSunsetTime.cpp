@@ -50,5 +50,9 @@ std::pair< DateTime, DateTime > getSunriseAndSunsetTime(const DateTime &currTime
     double midSunElevation = getSunElevation(dt, observer);
     return midSunElevation <= sunCriticalAngle;
   });
+  if (sunrise == currTime || sunset == currTime)
+  {
+    throw std::runtime_error("Polar day or polar night. No sunrise/sunset found.");
+  }
   return std::make_pair(sunrise, sunset);
 }
