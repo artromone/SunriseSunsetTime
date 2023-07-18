@@ -7,11 +7,51 @@ namespace
   int sunCriticalAngle = 0;
   double getSunElevation(const DateTime &currTime, Observer observer)
   {
-    SolarPosition solarPosition;
-    Eci sunEci = solarPosition.FindPosition(currTime);
+    Eci sunEci = SolarPosition().FindPosition(currTime);
     CoordTopocentric lookAngle = observer.GetLookAngle(sunEci);
-    double sunElevation = Util::RadiansToDegrees(lookAngle.elevation);
-    return sunElevation;
+    return Util::RadiansToDegrees(lookAngle.elevation);
+  }
+  DateTime binarySearchSunrise(const DateTime &start, const DateTime &end, const Observer &observer)
+  {
+    DateTime left = start;
+    DateTime right = end;
+    DateTime result = start;
+    while (left <= right)
+    {
+      DateTime mid = DateTime(left.Ticks() + (right.Ticks() - left.Ticks()) / 2);
+      double midSunElevation = getSunElevation(mid, observer);
+      if (midSunElevation > sunCriticalAngle)
+      {
+        result = mid;
+        right = mid - TimeSpan(1);
+      }
+      else
+      {
+        left = mid + TimeSpan(1);
+      }
+    }
+    return result;
+  }
+  DateTime binarySearchSunset(const DateTime &start, const DateTime &end, const Observer &observer)
+  {
+    DateTime left = start;
+    DateTime right = end;
+    DateTime result = end;
+    while (left <= right)
+    {
+      DateTime mid = DateTime(left.Ticks() + (right.Ticks() - left.Ticks()) / 2);
+      double midSunElevation = getSunElevation(mid, observer);
+      if (midSunElevation <= sunCriticalAngle)
+      {
+        result = mid;
+        right = mid - TimeSpan(1);
+      }
+      else
+      {
+        left = mid + TimeSpan(1);
+      }
+    }
+    return result;
   }
 }
 std::pair< DateTime, DateTime > getSunriseAndSunsetTime(const DateTime &currTime, const Observer &observer)
@@ -21,36 +61,7 @@ std::pair< DateTime, DateTime > getSunriseAndSunsetTime(const DateTime &currTime
   int day = currTime.Day();
   DateTime dayStart(year, month, day, 0, 0, 0, 0);
   DateTime dayEnd(year, month, day, 23, 59, 59, 999999);
-  int range = 10;
-  int64_t ticksLowerBound = dayStart.Ticks();
-  int64_t ticksUpperBound = dayEnd.Ticks();
-  int64_t step = (ticksUpperBound - ticksLowerBound) / range;
-  for (int64_t ticks = ticksLowerBound; step != 0; ticks += step)
-  {
-    double sunElevation = getSunElevation(DateTime(ticks), observer);
-    if (sunElevation > sunCriticalAngle)
-    {
-      ticksUpperBound = ticks;
-      ticksLowerBound = ticks - step;
-      step = (ticksUpperBound - ticksLowerBound) / range;
-    }
-  }
-  DateTime sunrise = DateTime(ticksLowerBound);
-  ticksLowerBound = sunrise.Ticks();
-  ticksUpperBound = dayEnd.Ticks();
-  step = (ticksUpperBound - ticksLowerBound) / range;
-  double prevSunElevation = sunCriticalAngle - 1;
-  for (int64_t ticks = ticksLowerBound; step != 0; ticks += step)
-  {
-    double sunElevation = getSunElevation(DateTime(ticks), observer);
-    if (sunElevation <= sunCriticalAngle && prevSunElevation > sunElevation)
-    {
-      ticksUpperBound = ticks;
-      ticksLowerBound = ticks - step;
-      step = (ticksUpperBound - ticksLowerBound) / range;
-    }
-    prevSunElevation = sunElevation;
-  }
-  DateTime sunset = DateTime(ticksLowerBound);
+  DateTime sunrise = binarySearchSunrise(dayStart, dayEnd, observer);
+  DateTime sunset = binarySearchSunset(dayStart, dayEnd, observer);
   return std::make_pair(sunrise, sunset);
 }
